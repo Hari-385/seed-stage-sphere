@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Rocket, Mail, Lock, User, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [role, setRole] = useState<"founder" | "investor" | null>(null);
@@ -17,7 +18,7 @@ const Signup = () => {
   });
   const navigate = useNavigate();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!role) {
@@ -35,9 +36,28 @@ const Signup = () => {
       return;
     }
 
-    // Simulate signup
-    toast.success("Account created successfully!");
-    navigate(role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: formData.name,
+            role: role,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        toast.success("Account created successfully!");
+        navigate(role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create account");
+    }
   };
 
   const handleSocialSignup = (provider: string) => {

@@ -1,21 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { User, Mail, Bell, Shield, Upload } from "lucide-react";
+import { User, Bell, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Settings = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    bio: "Founder of TechFlow AI, passionate about building AI-powered solutions.",
-    company: "TechFlow AI",
+    full_name: "",
+    email: "",
+    role: "" as "founder" | "investor",
   });
 
   const [notifications, setNotifications] = useState({
@@ -24,9 +27,63 @@ const Settings = () => {
     updates: false,
   });
 
-  const handleSave = () => {
-    toast.success("Settings saved successfully!");
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+      return;
+    }
+
+    if (user) {
+      loadProfile();
+    }
+  }, [user, loading, navigate]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfile({
+          full_name: data.full_name,
+          email: data.email,
+          role: data.role,
+        });
+      }
+    } catch (error: any) {
+      toast.error("Failed to load profile");
+    }
   };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profile.full_name,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success("Settings saved successfully!");
+    } catch (error: any) {
+      toast.error("Failed to save settings");
+    }
+  };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen">
@@ -50,31 +107,17 @@ const Settings = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-2xl text-white font-bold">
-                    JD
+                    {profile.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                   </div>
-                  <Button variant="outline" className="gap-2">
-                    <Upload className="w-4 h-4" />
-                    Change Photo
-                  </Button>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      value={profile.name}
-                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
-                    <Input
-                      id="company"
-                      value={profile.company}
-                      onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={profile.full_name}
+                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -83,18 +126,19 @@ const Settings = () => {
                     id="email"
                     type="email"
                     value={profile.email}
-                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    disabled
                   />
+                  <p className="text-sm text-muted-foreground">Email cannot be changed</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    rows={4}
-                    value={profile.bio}
-                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                  <Label htmlFor="role">Role</Label>
+                  <Input
+                    id="role"
+                    value={profile.role === 'founder' ? 'Startup Founder' : 'Investor'}
+                    disabled
                   />
+                  <p className="text-sm text-muted-foreground">Role cannot be changed</p>
                 </div>
               </CardContent>
             </Card>
