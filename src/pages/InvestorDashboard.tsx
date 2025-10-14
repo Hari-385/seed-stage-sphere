@@ -4,14 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import { 
   Search, Bookmark, MessageSquare, TrendingUp, 
   Briefcase, Target, Filter, Settings 
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 
 interface Startup {
   id: string;
@@ -26,7 +25,6 @@ interface Startup {
 
 const InvestorDashboard = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [savedStartups, setSavedStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,53 +33,44 @@ const InvestorDashboard = () => {
     const fetchData = async () => {
       if (!user) return;
 
-      try {
-        // Fetch user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      setProfile(profileData);
 
-        if (profileError) throw profileError;
-        setProfile(profileData);
+      // Fetch saved startups
+      const { data: savedData } = await supabase
+        .from('saved_startups')
+        .select(`
+          startup_id,
+          startups (
+            id,
+            name,
+            logo,
+            domain,
+            stage,
+            funding,
+            description,
+            tags
+          )
+        `)
+        .eq('user_id', user.id);
 
-        // Fetch saved startups
-        const { data: savedData, error: savedError } = await supabase
-          .from('saved_startups')
-          .select(`
-            startup_id,
-            startups (
-              id,
-              name,
-              logo,
-              domain,
-              stage,
-              funding,
-              description,
-              tags
-            )
-          `)
-          .eq('user_id', user.id);
-
-        if (savedError) throw savedError;
-
-        const startups = savedData?.map((item: any) => item.startups).filter(Boolean) || [];
-        setSavedStartups(startups);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      if (savedData) {
+        setSavedStartups(savedData.map((item: any) => item.startups).filter(Boolean));
       }
+
+      setLoading(false);
     };
 
     fetchData();
-  }, [user, toast]);
+  }, [user]);
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Investor';
 
   return (
     <div className="min-h-screen">
@@ -92,9 +81,7 @@ const InvestorDashboard = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2">
-                Welcome Back, {profile?.full_name || 'Investor'}!
-              </h1>
+              <h1 className="text-4xl font-bold mb-2">Welcome Back, {firstName}!</h1>
               <p className="text-muted-foreground">Discover your next investment opportunity</p>
             </div>
             <Link to="/settings">
@@ -200,24 +187,19 @@ const InvestorDashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {loading ? (
-                    <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                    <p className="text-sm text-muted-foreground">Loading...</p>
                   ) : savedStartups.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No saved startups yet. Browse startups to find opportunities!
-                    </div>
+                    <p className="text-sm text-muted-foreground">No saved startups yet. Browse startups to save them!</p>
                   ) : (
-                    savedStartups.map((startup) => (
-                      <div key={startup.id} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                    savedStartups.map((startup, index) => (
+                      <div key={index} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex gap-3">
-                            <div className="text-3xl">{startup.logo}</div>
-                            <div>
-                              <h3 className="font-semibold text-lg mb-1">{startup.name}</h3>
-                              <div className="flex gap-2 flex-wrap">
-                                <Badge variant="secondary">{startup.domain}</Badge>
-                                <Badge variant="outline">{startup.stage}</Badge>
-                                <Badge className="bg-green-500">{startup.funding}</Badge>
-                              </div>
+                          <div>
+                            <h3 className="font-semibold text-lg mb-1">{startup.name}</h3>
+                            <div className="flex gap-2 flex-wrap">
+                              <Badge variant="secondary">{startup.domain}</Badge>
+                              <Badge variant="outline">{startup.stage}</Badge>
+                              <Badge className="bg-green-500">{startup.funding}</Badge>
                             </div>
                           </div>
                         </div>

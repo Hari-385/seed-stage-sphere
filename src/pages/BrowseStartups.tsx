@@ -22,58 +22,44 @@ interface Startup {
 }
 
 const BrowseStartups = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [startups, setStartups] = useState<Startup[]>([]);
   const [savedStartupIds, setSavedStartupIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchStartups();
-    if (user) {
-      fetchSavedStartups();
-    }
-  }, [user]);
-
-  const fetchStartups = async () => {
-    try {
+    const fetchStartups = async () => {
       const { data, error } = await supabase
         .from('startups')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setStartups(data || []);
-    } catch (error) {
-      console.error('Error fetching startups:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load startups",
-        variant: "destructive",
-      });
-    } finally {
+      if (data) {
+        setStartups(data);
+      }
       setLoading(false);
-    }
-  };
+    };
 
-  const fetchSavedStartups = async () => {
-    if (!user) return;
+    const fetchSavedStartups = async () => {
+      if (!user) return;
 
-    try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('saved_startups')
         .select('startup_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
-      setSavedStartupIds(new Set(data?.map(item => item.startup_id) || []));
-    } catch (error) {
-      console.error('Error fetching saved startups:', error);
-    }
-  };
+      if (data) {
+        setSavedStartupIds(new Set(data.map((item) => item.startup_id)));
+      }
+    };
 
-  const toggleSaveStartup = async (startupId: string) => {
+    fetchStartups();
+    fetchSavedStartups();
+  }, [user]);
+
+  const handleSaveStartup = async (startupId: string) => {
     if (!user) {
       toast({
         title: "Login required",
@@ -83,56 +69,48 @@ const BrowseStartups = () => {
       return;
     }
 
-    try {
-      const isSaved = savedStartupIds.has(startupId);
+    const isSaved = savedStartupIds.has(startupId);
 
-      if (isSaved) {
-        const { error } = await supabase
-          .from('saved_startups')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('startup_id', startupId);
+    if (isSaved) {
+      // Unsave
+      const { error } = await supabase
+        .from('saved_startups')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('startup_id', startupId);
 
-        if (error) throw error;
-
-        setSavedStartupIds(prev => {
+      if (!error) {
+        setSavedStartupIds((prev) => {
           const newSet = new Set(prev);
           newSet.delete(startupId);
           return newSet;
         });
-
         toast({
-          title: "Removed",
-          description: "Startup removed from saved list",
-        });
-      } else {
-        const { error } = await supabase
-          .from('saved_startups')
-          .insert({ user_id: user.id, startup_id: startupId });
-
-        if (error) throw error;
-
-        setSavedStartupIds(prev => new Set([...prev, startupId]));
-
-        toast({
-          title: "Saved",
-          description: "Startup added to your saved list",
+          title: "Startup removed",
+          description: "Startup removed from your saved list",
         });
       }
-    } catch (error) {
-      console.error('Error toggling save:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update saved startups",
-        variant: "destructive",
-      });
+    } else {
+      // Save
+      const { error } = await supabase
+        .from('saved_startups')
+        .insert({ user_id: user.id, startup_id: startupId });
+
+      if (!error) {
+        setSavedStartupIds((prev) => new Set(prev).add(startupId));
+        toast({
+          title: "Startup saved!",
+          description: "Added to your saved startups",
+        });
+      }
     }
   };
 
-  const filteredStartups = startups.filter(startup =>
+  const filteredStartups = startups.filter((startup) =>
+    searchQuery === "" ||
     startup.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     startup.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    startup.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    startup.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -193,16 +171,16 @@ const BrowseStartups = () => {
           {/* Startup Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading ? (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                Loading startups...
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">Loading startups...</p>
               </div>
             ) : filteredStartups.length === 0 ? (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                No startups found matching your search
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">No startups found</p>
               </div>
             ) : (
-              filteredStartups.map((startup) => (
-                <Card key={startup.id} className="glass border-0 card-hover group">
+              filteredStartups.map((startup, index) => (
+                <Card key={index} className="glass border-0 card-hover group">
                   <CardContent className="p-6">
                     {/* Logo and Save Button */}
                     <div className="flex items-start justify-between mb-4">
@@ -213,7 +191,7 @@ const BrowseStartups = () => {
                         variant="ghost" 
                         size="icon" 
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => toggleSaveStartup(startup.id)}
+                        onClick={() => handleSaveStartup(startup.id)}
                       >
                         <Heart className={`w-5 h-5 ${savedStartupIds.has(startup.id) ? 'fill-red-500 text-red-500' : ''}`} />
                       </Button>
