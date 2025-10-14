@@ -8,31 +8,80 @@ import {
   Search, Bookmark, MessageSquare, TrendingUp, 
   Briefcase, Target, Filter, Settings 
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Startup {
+  id: string;
+  name: string;
+  logo: string;
+  domain: string;
+  stage: string;
+  funding: string;
+  description: string;
+  tags: string[];
+}
 
 const InvestorDashboard = () => {
-  const savedStartups = [
-    {
-      name: "TechFlow AI",
-      domain: "AI/ML",
-      funding: "$500K",
-      stage: "Series A",
-      description: "AI-powered project management platform with predictive analytics"
-    },
-    {
-      name: "HealthSync",
-      domain: "HealthTech",
-      funding: "$1M",
-      stage: "Series B",
-      description: "Revolutionary telemedicine platform connecting patients with specialists"
-    },
-    {
-      name: "GreenEnergy Solutions",
-      domain: "CleanTech",
-      funding: "$750K",
-      stage: "Seed",
-      description: "Sustainable energy solutions for residential and commercial properties"
-    }
-  ];
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [savedStartups, setSavedStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        setProfile(profileData);
+
+        // Fetch saved startups
+        const { data: savedData, error: savedError } = await supabase
+          .from('saved_startups')
+          .select(`
+            startup_id,
+            startups (
+              id,
+              name,
+              logo,
+              domain,
+              stage,
+              funding,
+              description,
+              tags
+            )
+          `)
+          .eq('user_id', user.id);
+
+        if (savedError) throw savedError;
+
+        const startups = savedData?.map((item: any) => item.startups).filter(Boolean) || [];
+        setSavedStartups(startups);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, toast]);
 
   return (
     <div className="min-h-screen">
@@ -43,7 +92,9 @@ const InvestorDashboard = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Welcome Back, Investor!</h1>
+              <h1 className="text-4xl font-bold mb-2">
+                Welcome Back, {profile?.full_name || 'Investor'}!
+              </h1>
               <p className="text-muted-foreground">Discover your next investment opportunity</p>
             </div>
             <Link to="/settings">
@@ -63,7 +114,7 @@ const InvestorDashboard = () => {
                     <Bookmark className="w-6 h-6 text-primary" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold mb-1">12</div>
+                <div className="text-2xl font-bold mb-1">{savedStartups.length}</div>
                 <div className="text-sm text-muted-foreground">Saved Startups</div>
               </CardContent>
             </Card>
@@ -148,30 +199,41 @@ const InvestorDashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {savedStartups.map((startup, index) => (
-                    <div key={index} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-lg mb-1">{startup.name}</h3>
-                          <div className="flex gap-2 flex-wrap">
-                            <Badge variant="secondary">{startup.domain}</Badge>
-                            <Badge variant="outline">{startup.stage}</Badge>
-                            <Badge className="bg-green-500">{startup.funding}</Badge>
+                  {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                  ) : savedStartups.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No saved startups yet. Browse startups to find opportunities!
+                    </div>
+                  ) : (
+                    savedStartups.map((startup) => (
+                      <div key={startup.id} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex gap-3">
+                            <div className="text-3xl">{startup.logo}</div>
+                            <div>
+                              <h3 className="font-semibold text-lg mb-1">{startup.name}</h3>
+                              <div className="flex gap-2 flex-wrap">
+                                <Badge variant="secondary">{startup.domain}</Badge>
+                                <Badge variant="outline">{startup.stage}</Badge>
+                                <Badge className="bg-green-500">{startup.funding}</Badge>
+                              </div>
+                            </div>
                           </div>
                         </div>
+                        <p className="text-sm text-muted-foreground mb-4">{startup.description}</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="btn-hero flex-1">
+                            View Details
+                          </Button>
+                          <Button size="sm" variant="outline" className="flex-1">
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Connect
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-4">{startup.description}</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" className="btn-hero flex-1">
-                          View Details
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Connect
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
