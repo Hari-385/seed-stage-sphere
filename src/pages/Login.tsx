@@ -35,20 +35,40 @@ const Login = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Login error:", error);
+        throw error;
+      }
 
       if (data.user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profile fetch error:", profileError);
+          toast.error("Error fetching profile");
+          return;
+        }
+
+        if (!profile) {
+          toast.error("Profile not found. Please contact support.");
+          await supabase.auth.signOut();
+          return;
+        }
 
         toast.success("Login successful!");
-        navigate(profile?.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+        navigate(profile.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to login");
+      console.error("Login failed:", error);
+      if (error.message.includes("Invalid login credentials")) {
+        toast.error("Invalid email or password");
+      } else {
+        toast.error(error.message || "Failed to login");
+      }
     }
   };
 
