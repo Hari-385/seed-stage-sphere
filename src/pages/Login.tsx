@@ -41,26 +41,26 @@ const Login = () => {
       }
 
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+        const { data: userRole, error: roleError } = await supabase
+          .from('user_roles')
           .select('role')
-          .eq('id', data.user.id)
+          .eq('user_id', data.user.id)
           .maybeSingle();
 
-        if (profileError) {
-          console.error("Profile fetch error:", profileError);
-          toast.error("Error fetching profile");
+        if (roleError) {
+          console.error("Role fetch error:", roleError);
+          toast.error("Error fetching user role");
           return;
         }
 
-        if (!profile) {
-          toast.error("Profile not found. Please contact support.");
+        if (!userRole) {
+          toast.error("User role not found. Please contact support.");
           await supabase.auth.signOut();
           return;
         }
 
         toast.success("Login successful!");
-        navigate(profile.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+        navigate(userRole.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
       }
     } catch (error: any) {
       console.error("Login failed:", error);
