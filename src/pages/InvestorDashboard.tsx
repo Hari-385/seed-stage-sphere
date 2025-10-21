@@ -166,10 +166,12 @@ const InvestorDashboard = () => {
                         <span>Browse All Startups</span>
                       </Button>
                     </Link>
-                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <Filter className="w-6 h-6" />
-                      <span>Filter by Domain</span>
-                    </Button>
+                    <Link to="/analytics" className="block">
+                      <Button variant="outline" className="w-full h-24 flex flex-col gap-2 border-primary/20 hover:border-primary/40">
+                        <TrendingUp className="w-6 h-6 text-primary" />
+                        <span>Pitch Analytics</span>
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

@@ -4,12 +4,90 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { PitchUpload } from "@/components/PitchUpload";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import { 
-  Upload, Eye, MessageSquare, TrendingUp, 
+  Eye, MessageSquare, TrendingUp, 
   Users, DollarSign, FileText, Settings 
 } from "lucide-react";
 
+interface Startup {
+  id: string;
+  name: string;
+  domain: string;
+  stage: string;
+  funding: string;
+  description: string;
+}
+
 const StartupDashboard = () => {
+  const { user } = useAuth();
+  const [startup, setStartup] = useState<Startup | null>(null);
+  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [pitchAnalysis, setPitchAnalysis] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      
+      setProfile(profileData);
+
+      // Fetch user's startup
+      const { data: startupData } = await supabase
+        .from('startups')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setStartup(startupData);
+
+      // Fetch pitch analysis if startup exists
+      if (startupData) {
+        const { data: analysisData } = await supabase
+          .from('pitch_analyses')
+          .select('*')
+          .eq('startup_id', startupData.id)
+          .eq('analysis_status', 'completed')
+          .order('uploaded_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        setPitchAnalysis(analysisData);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [user]);
+
+  const handleUploadComplete = () => {
+    // Refetch analysis after upload
+    if (startup) {
+      supabase
+        .from('pitch_analyses')
+        .select('*')
+        .eq('startup_id', startup.id)
+        .eq('analysis_status', 'completed')
+        .order('uploaded_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setPitchAnalysis(data));
+    }
+  };
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Founder';
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -19,8 +97,10 @@ const StartupDashboard = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Welcome Back, John!</h1>
-              <p className="text-muted-foreground">Here's what's happening with your startup</p>
+              <h1 className="text-4xl font-bold mb-2">Welcome Back, {firstName}!</h1>
+              <p className="text-muted-foreground">
+                {startup ? `Managing ${startup.name}` : "Set up your startup profile to get started"}
+              </p>
             </div>
             <Link to="/settings">
               <Button variant="outline" className="gap-2">
@@ -89,62 +169,66 @@ const StartupDashboard = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Pitch Status */}
-              <Card className="glass border-0">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    My Startup Pitch
-                  </CardTitle>
-                  <CardDescription>Manage your pitch deck and details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                    <div>
-                      <div className="font-semibold mb-1">TechFlow AI - Series A</div>
-                      <div className="text-sm text-muted-foreground">Last updated 2 days ago</div>
-                    </div>
-                    <Badge className="bg-green-500">Approved</Badge>
-                  </div>
+              {/* Pitch Upload */}
+              {startup && <PitchUpload startupId={startup.id} onUploadComplete={handleUploadComplete} />}
 
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium mb-1">Problem Statement</div>
-                        <p className="text-sm text-muted-foreground">
-                          Traditional project management tools lack AI-powered insights and automation.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                        <TrendingUp className="w-4 h-4 text-secondary" />
-                      </div>
-                      <div>
-                        <div className="font-medium mb-1">Solution</div>
-                        <p className="text-sm text-muted-foreground">
-                          AI-powered platform that automates task management and provides predictive analytics.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              {!startup && (
+                <Card className="glass border-0">
+                  <CardHeader>
+                    <CardTitle>Create Your Startup Profile</CardTitle>
+                    <CardDescription>Set up your startup profile before uploading pitch materials</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link to="/settings">
+                      <Button className="btn-hero">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Go to Settings
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )}
 
-                  <div className="flex gap-3 pt-4">
-                    <Button className="btn-hero flex-1">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Update Pitch Deck
-                    </Button>
-                    <Button variant="outline" className="flex-1">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Startup Info */}
+              {startup && (
+                <Card className="glass border-0">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Startup Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div>
+                        <div className="font-semibold mb-1">{startup.name}</div>
+                        <div className="text-sm text-muted-foreground">{startup.description}</div>
+                      </div>
+                      <Badge className="bg-green-500">{startup.stage}</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <div className="text-xs text-muted-foreground mb-1">Domain</div>
+                        <div className="font-medium">{startup.domain}</div>
+                      </div>
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <div className="text-xs text-muted-foreground mb-1">Funding</div>
+                        <div className="font-medium">{startup.funding}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Link to="/settings" className="flex-1">
+                        <Button variant="outline" className="w-full">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Edit Details
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Quick Actions */}
               <Card className="glass border-0">
@@ -178,6 +262,57 @@ const StartupDashboard = () => {
 
             {/* Right Column */}
             <div className="space-y-6">
+              {/* Pitch Analysis Score */}
+              {pitchAnalysis && (
+                <Card className="glass border-0 bg-gradient-to-br from-primary/5 to-secondary/5">
+                  <CardHeader>
+                    <CardTitle>Your Pitch Score</CardTitle>
+                    <CardDescription>AI-powered analysis of your pitch</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center mb-6">
+                      <div className={`text-6xl font-bold mb-2 ${
+                        (pitchAnalysis.overall_score || 0) >= 75 ? 'text-green-500' :
+                        (pitchAnalysis.overall_score || 0) >= 50 ? 'text-yellow-500' :
+                        'text-red-500'
+                      }`}>
+                        {pitchAnalysis.overall_score || 'N/A'}
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-4">Overall Score</div>
+                      {pitchAnalysis.investment_recommendation && (
+                        <Badge className={
+                          pitchAnalysis.investment_recommendation === 'Strong Buy' ? 'bg-green-500' :
+                          pitchAnalysis.investment_recommendation === 'Buy' ? 'bg-green-400' :
+                          pitchAnalysis.investment_recommendation === 'Pass' ? 'bg-red-500' :
+                          ''
+                        }>
+                          {pitchAnalysis.investment_recommendation}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        { label: "Market Size", score: pitchAnalysis.market_size_score },
+                        { label: "Team Strength", score: pitchAnalysis.team_strength_score },
+                        { label: "Product", score: pitchAnalysis.product_viability_score },
+                        { label: "Financial", score: pitchAnalysis.financial_health_score },
+                        { label: "Competitive Edge", score: pitchAnalysis.competitive_advantage_score }
+                      ].map(({ label, score }) => (
+                        <div key={label} className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className={`font-semibold ${
+                            (score || 0) >= 75 ? 'text-green-500' :
+                            (score || 0) >= 50 ? 'text-yellow-500' :
+                            'text-red-500'
+                          }`}>
+                            {score || 'N/A'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {/* Recent Activity */}
               <Card className="glass border-0">
                 <CardHeader>

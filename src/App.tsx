@@ -11,6 +11,7 @@ import InvestorDashboard from "./pages/InvestorDashboard";
 import BrowseStartups from "./pages/BrowseStartups";
 import Resources from "./pages/Resources";
 import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/browse" element={<BrowseStartups />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

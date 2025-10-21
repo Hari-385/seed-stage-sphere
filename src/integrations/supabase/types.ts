@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      pitch_analyses: {
+        Row: {
+          analysis_status: string
+          competitive_advantage_score: number | null
+          created_at: string
+          file_name: string
+          file_path: string
+          financial_health_score: number | null
+          financial_summary: string | null
+          id: string
+          investment_recommendation: string | null
+          key_concerns: string[] | null
+          key_strengths: string[] | null
+          market_insights: string | null
+          market_size_score: number | null
+          overall_score: number | null
+          product_viability_score: number | null
+          risk_factors: string[] | null
+          startup_id: string
+          team_analysis: string | null
+          team_strength_score: number | null
+          updated_at: string
+          uploaded_at: string
+        }
+        Insert: {
+          analysis_status?: string
+          competitive_advantage_score?: number | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          financial_health_score?: number | null
+          financial_summary?: string | null
+          id?: string
+          investment_recommendation?: string | null
+          key_concerns?: string[] | null
+          key_strengths?: string[] | null
+          market_insights?: string | null
+          market_size_score?: number | null
+          overall_score?: number | null
+          product_viability_score?: number | null
+          risk_factors?: string[] | null
+          startup_id: string
+          team_analysis?: string | null
+          team_strength_score?: number | null
+          updated_at?: string
+          uploaded_at?: string
+        }
+        Update: {
+          analysis_status?: string
+          competitive_advantage_score?: number | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          financial_health_score?: number | null
+          financial_summary?: string | null
+          id?: string
+          investment_recommendation?: string | null
+          key_concerns?: string[] | null
+          key_strengths?: string[] | null
+          market_insights?: string | null
+          market_size_score?: number | null
+          overall_score?: number | null
+          product_viability_score?: number | null
+          risk_factors?: string[] | null
+          startup_id?: string
+          team_analysis?: string | null
+          team_strength_score?: number | null
+          updated_at?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitch_analyses_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -151,10 +231,9 @@ export type Database = {
     }
     Functions: {
       has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
+        Args:
+          | { _role: Database["public"]["Enums"]["app_role"]; _user_id: string }
+          | { _role: string; _user_id: string }
         Returns: boolean
       }
     }

@@ -1,1 +1,4 @@
 project_id = "tgewcthcjqmozsfdnbel"
+
+[functions.analyze-pitch]
+verify_jwt = true
