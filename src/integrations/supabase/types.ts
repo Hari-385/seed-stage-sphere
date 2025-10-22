@@ -17,6 +17,7 @@ export type Database = {
       pitch_analyses: {
         Row: {
           analysis_status: string
+          category: string | null
           competitive_advantage_score: number | null
           created_at: string
           file_name: string
@@ -30,16 +31,20 @@ export type Database = {
           market_insights: string | null
           market_size_score: number | null
           overall_score: number | null
+          pitch_description: string | null
           product_viability_score: number | null
+          required_amount: string | null
           risk_factors: string[] | null
           startup_id: string
           team_analysis: string | null
           team_strength_score: number | null
+          title: string | null
           updated_at: string
           uploaded_at: string
         }
         Insert: {
           analysis_status?: string
+          category?: string | null
           competitive_advantage_score?: number | null
           created_at?: string
           file_name: string
@@ -53,16 +58,20 @@ export type Database = {
           market_insights?: string | null
           market_size_score?: number | null
           overall_score?: number | null
+          pitch_description?: string | null
           product_viability_score?: number | null
+          required_amount?: string | null
           risk_factors?: string[] | null
           startup_id: string
           team_analysis?: string | null
           team_strength_score?: number | null
+          title?: string | null
           updated_at?: string
           uploaded_at?: string
         }
         Update: {
           analysis_status?: string
+          category?: string | null
           competitive_advantage_score?: number | null
           created_at?: string
           file_name?: string
@@ -76,11 +85,14 @@ export type Database = {
           market_insights?: string | null
           market_size_score?: number | null
           overall_score?: number | null
+          pitch_description?: string | null
           product_viability_score?: number | null
+          required_amount?: string | null
           risk_factors?: string[] | null
           startup_id?: string
           team_analysis?: string | null
           team_strength_score?: number | null
+          title?: string | null
           updated_at?: string
           uploaded_at?: string
         }
