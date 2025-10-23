@@ -11,44 +11,47 @@ const Resources = () => {
       title: "Startup Funding Guide",
       category: "Guide",
       description: "Complete guide to understanding different funding stages, from seed to Series C.",
-      color: "from-primary to-primary-glow"
+      color: "from-primary to-primary-glow",
+      filePath: "/resources/Startup_Funding_Guide.pdf"
     },
     {
       icon: FileText,
       title: "Pitch Deck Template",
       category: "Template",
       description: "Professional pitch deck template used by successful startups to raise millions.",
-      color: "from-secondary to-[hsl(340,80%,65%)]"
-    },
-    {
-      icon: Video,
-      title: "Investor Relations Workshop",
-      category: "Video",
-      description: "Learn how to build and maintain relationships with investors effectively.",
-      color: "from-accent to-[hsl(180,70%,60%)]"
+      color: "from-secondary to-[hsl(340,80%,65%)]",
+      filePath: "/resources/Pitch_Deck_Template.pdf"
     },
     {
       icon: Award,
       title: "Government Startup Schemes",
       category: "Resource",
       description: "Comprehensive list of government programs and schemes supporting startups.",
-      color: "from-green-500 to-emerald-500"
+      color: "from-green-500 to-emerald-500",
+      filePath: "/resources/Guidelines_for_Startup_India_Seed_Fund_Scheme.pdf"
     },
     {
       icon: BookOpen,
       title: "Market Research Framework",
       category: "Guide",
       description: "Step-by-step framework for conducting effective market research for your startup.",
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      icon: FileText,
-      title: "Legal Documentation Guide",
-      category: "Guide",
-      description: "Essential legal documents every startup founder needs to know about.",
-      color: "from-blue-500 to-cyan-500"
+      color: "from-purple-500 to-pink-500",
+      filePath: "/resources/Market_Research_Framework.pdf"
     }
   ];
+
+  const handleDownload = (filePath: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = filePath;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePreview = (filePath: string) => {
+    window.open(filePath, '_blank');
+  };
 
   return (
     <div className="min-h-screen">
@@ -79,11 +82,18 @@ const Resources = () => {
                     A comprehensive 50-page guide covering everything from preparing your startup for funding to closing the deal. Includes real examples from successful fundraising campaigns.
                   </p>
                   <div className="flex gap-4">
-                    <Button className="btn-hero gap-2">
+                    <Button 
+                      className="btn-hero gap-2"
+                      onClick={() => handleDownload('/resources/The_Complete_Fundraising_Playbook.pdf', 'The_Complete_Fundraising_Playbook.pdf')}
+                    >
                       <Download className="w-4 h-4" />
                       Download PDF
                     </Button>
-                    <Button variant="outline" className="gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="gap-2"
+                      onClick={() => handlePreview('/resources/The_Complete_Fundraising_Playbook.pdf')}
+                    >
                       <ExternalLink className="w-4 h-4" />
                       Preview
                     </Button>
@@ -116,11 +126,20 @@ const Resources = () => {
                     {resource.description}
                   </p>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleDownload(resource.filePath, resource.title + '.pdf')}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
-                    <Button size="sm" variant="ghost">
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handlePreview(resource.filePath)}
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   </div>
