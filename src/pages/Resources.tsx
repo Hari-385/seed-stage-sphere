@@ -79,7 +79,7 @@ const Resources = () => {
                   </div>
                   <h2 className="text-3xl font-bold mb-4">The Complete Fundraising Playbook</h2>
                   <p className="text-muted-foreground mb-6">
-                    A comprehensive 50-page guide covering everything from preparing your startup for funding to closing the deal. Includes real examples from successful fundraising campaigns.
+                    A comprehensive guide covering everything from preparing your startup for funding to closing the deal. Includes real examples from successful fundraising campaigns.
                   </p>
                   <div className="flex gap-4">
                     <Button 
