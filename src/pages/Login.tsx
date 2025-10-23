@@ -37,10 +37,11 @@ const Login = () => {
 
       if (error) {
         console.error("Login error:", error);
-        throw error;
+        toast.error(error.message || "Failed to login");
+        return;
       }
 
-      if (data.user) {
+      if (data.user && data.session) {
         const { data: userRole, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -49,26 +50,26 @@ const Login = () => {
 
         if (roleError) {
           console.error("Role fetch error:", roleError);
-          toast.error("Error fetching user role");
+          toast.error("Error fetching user role. Please try again.");
           return;
         }
 
         if (!userRole) {
-          toast.error("User role not found. Please contact support.");
+          toast.error("User role not found. Please sign up again or contact support.");
           await supabase.auth.signOut();
           return;
         }
 
         toast.success("Login successful!");
-        navigate(userRole.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+        
+        // Navigate after a brief delay to ensure auth state is updated
+        setTimeout(() => {
+          navigate(userRole.role === "founder" ? "/dashboard/startup" : "/dashboard/investor");
+        }, 100);
       }
     } catch (error: any) {
       console.error("Login failed:", error);
-      if (error.message.includes("Invalid login credentials")) {
-        toast.error("Invalid email or password");
-      } else {
-        toast.error(error.message || "Failed to login");
-      }
+      toast.error(error.message || "Failed to login. Please try again.");
     }
   };
 
