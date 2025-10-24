@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { User, Bell, Shield, Rocket } from "lucide-react";
+import { User, Bell, Shield, Rocket, Target } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,9 @@ const Settings = () => {
     full_name: "",
     email: "",
     role: "" as "founder" | "investor",
+    investment_focus: [] as string[],
+    min_investment_amount: "",
+    max_investment_amount: "",
   });
 
   const [startup, setStartup] = useState({
@@ -67,6 +70,9 @@ const Settings = () => {
           full_name: data.full_name,
           email: data.email,
           role: data.role,
+          investment_focus: data.investment_focus || [],
+          min_investment_amount: data.min_investment_amount?.toString() || "",
+          max_investment_amount: data.max_investment_amount?.toString() || "",
         });
 
         // Load startup if user is a founder
@@ -98,11 +104,24 @@ const Settings = () => {
     if (!user) return;
 
     try {
+      const updateData: any = {
+        full_name: profile.full_name,
+      };
+
+      // Add investor-specific fields if user is an investor
+      if (profile.role === 'investor') {
+        updateData.investment_focus = profile.investment_focus;
+        if (profile.min_investment_amount) {
+          updateData.min_investment_amount = parseFloat(profile.min_investment_amount);
+        }
+        if (profile.max_investment_amount) {
+          updateData.max_investment_amount = parseFloat(profile.max_investment_amount);
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: profile.full_name,
-        })
+        .update(updateData)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -265,6 +284,59 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Investment Preferences - Only for Investors */}
+            {profile.role === 'investor' && (
+              <Card className="glass border-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Investment Preferences
+                  </CardTitle>
+                  <CardDescription>
+                    Configure your investment focus and criteria
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="investment-focus">Investment Focus Areas</Label>
+                    <Input
+                      id="investment-focus"
+                      placeholder="e.g., AI/ML, FinTech, HealthTech (comma-separated)"
+                      value={profile.investment_focus.join(', ')}
+                      onChange={(e) => setProfile({ 
+                        ...profile, 
+                        investment_focus: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                      })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="min-investment">Min Investment ($)</Label>
+                      <Input
+                        id="min-investment"
+                        type="number"
+                        placeholder="10000"
+                        value={profile.min_investment_amount}
+                        onChange={(e) => setProfile({ ...profile, min_investment_amount: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="max-investment">Max Investment ($)</Label>
+                      <Input
+                        id="max-investment"
+                        type="number"
+                        placeholder="500000"
+                        value={profile.max_investment_amount}
+                        onChange={(e) => setProfile({ ...profile, max_investment_amount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Startup Profile - Only for Founders */}
             {profile.role === 'founder' && (

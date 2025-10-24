@@ -27,6 +27,7 @@ const StartupDashboard = () => {
   const [startup, setStartup] = useState<Startup | null>(null);
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [pitchAnalysis, setPitchAnalysis] = useState<any>(null);
+  const [investorDecisions, setInvestorDecisions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,6 +64,23 @@ const StartupDashboard = () => {
           .maybeSingle();
         
         setPitchAnalysis(analysisData);
+
+        // Fetch investor decisions if analysis exists
+        if (analysisData) {
+          const { data: decisionsData } = await supabase
+            .from('investment_decisions')
+            .select(`
+              *,
+              profiles (
+                full_name,
+                email
+              )
+            `)
+            .eq('pitch_analysis_id', analysisData.id)
+            .order('created_at', { ascending: false });
+          
+          setInvestorDecisions(decisionsData || []);
+        }
       }
 
       setLoading(false);
@@ -262,6 +280,54 @@ const StartupDashboard = () => {
 
             {/* Right Column */}
             <div className="space-y-6">
+              {/* Investor Decisions */}
+              {investorDecisions.length > 0 && (
+                <Card className="glass border-0">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5" />
+                        Investment Decisions
+                      </CardTitle>
+                      <Badge variant="secondary">{investorDecisions.length}</Badge>
+                    </div>
+                    <CardDescription>Investors who reviewed your pitch</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {investorDecisions.map((decision) => (
+                      <div key={decision.id} className="p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="font-semibold">{decision.profiles?.full_name || "Anonymous Investor"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(decision.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <Badge className={
+                            decision.status === 'accepted' ? 'bg-green-500' :
+                            decision.status === 'rejected' ? 'bg-red-500' :
+                            'bg-yellow-500'
+                          }>
+                            {decision.status.charAt(0).toUpperCase() + decision.status.slice(1)}
+                          </Badge>
+                        </div>
+                        {decision.granted_amount && (
+                          <div className="mb-2">
+                            <span className="text-sm text-muted-foreground">Investment Amount: </span>
+                            <span className="text-sm font-semibold text-green-600">
+                              ${decision.granted_amount.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        {decision.feedback && (
+                          <p className="text-sm text-muted-foreground">{decision.feedback}</p>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Pitch Analysis Score */}
               {pitchAnalysis && (
                 <Card className="glass border-0 bg-gradient-to-br from-primary/5 to-secondary/5">

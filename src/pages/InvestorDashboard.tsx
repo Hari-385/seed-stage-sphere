@@ -9,8 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { 
   Search, Bookmark, MessageSquare, TrendingUp, 
-  Briefcase, Target, Filter, Settings 
+  Briefcase, Target, Filter, Settings, FileText
 } from "lucide-react";
+import { PitchReviewModal } from "@/components/PitchReviewModal";
 
 interface Startup {
   id: string;
@@ -27,6 +28,9 @@ const InvestorDashboard = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const [savedStartups, setSavedStartups] = useState<Startup[]>([]);
+  const [pendingPitches, setPendingPitches] = useState<any[]>([]);
+  const [selectedPitch, setSelectedPitch] = useState<any>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,11 +68,74 @@ const InvestorDashboard = () => {
         setSavedStartups(savedData.map((item: any) => item.startups).filter(Boolean));
       }
 
+      // Fetch pending pitches for review
+      const { data: pitchesData } = await supabase
+        .from('pitch_analyses')
+        .select(`
+          *,
+          startups (
+            name,
+            domain,
+            stage,
+            description
+          )
+        `)
+        .eq('analysis_status', 'completed')
+        .order('uploaded_at', { ascending: false });
+
+      if (pitchesData) {
+        // Filter out pitches that already have decisions from this investor
+        const { data: decisionsData } = await supabase
+          .from('investment_decisions')
+          .select('pitch_analysis_id')
+          .eq('investor_id', user.id);
+
+        const decidedPitchIds = decisionsData?.map(d => d.pitch_analysis_id) || [];
+        const pending = pitchesData.filter(p => !decidedPitchIds.includes(p.id));
+        setPendingPitches(pending);
+      }
+
       setLoading(false);
     };
 
     fetchData();
   }, [user]);
+
+  const handleReviewPitch = (pitch: any) => {
+    setSelectedPitch(pitch);
+    setReviewModalOpen(true);
+  };
+
+  const handleDecisionMade = () => {
+    // Refresh pending pitches
+    if (user) {
+      supabase
+        .from('pitch_analyses')
+        .select(`
+          *,
+          startups (
+            name,
+            domain,
+            stage,
+            description
+          )
+        `)
+        .eq('analysis_status', 'completed')
+        .order('uploaded_at', { ascending: false })
+        .then(async ({ data: pitchesData }) => {
+          if (pitchesData) {
+            const { data: decisionsData } = await supabase
+              .from('investment_decisions')
+              .select('pitch_analysis_id')
+              .eq('investor_id', user.id);
+
+            const decidedPitchIds = decisionsData?.map(d => d.pitch_analysis_id) || [];
+            const pending = pitchesData.filter(p => !decidedPitchIds.includes(p.id));
+            setPendingPitches(pending);
+          }
+        });
+    }
+  };
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Investor';
 
@@ -149,6 +216,72 @@ const InvestorDashboard = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Pending Pitches for Review */}
+              {pendingPitches.length > 0 && (
+                <Card className="glass border-0">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Pitches to Review
+                      </CardTitle>
+                      <Badge variant="secondary">{pendingPitches.length} new</Badge>
+                    </div>
+                    <CardDescription>AI-analyzed pitches waiting for your evaluation</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {pendingPitches.slice(0, 3).map((pitch) => (
+                      <div key={pitch.id} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1">
+                              {pitch.startups?.name || "Unknown Startup"}
+                            </h3>
+                            <div className="flex gap-2 flex-wrap mb-2">
+                              <Badge variant="secondary">{pitch.startups?.domain}</Badge>
+                              <Badge variant="outline">{pitch.startups?.stage}</Badge>
+                              {pitch.overall_score && (
+                                <Badge className={
+                                  pitch.overall_score >= 75 ? 'bg-green-500' :
+                                  pitch.overall_score >= 50 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }>
+                                  Score: {pitch.overall_score}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {pitch.pitch_description || pitch.startups?.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            className="btn-hero flex-1"
+                            onClick={() => handleReviewPitch(pitch)}
+                          >
+                            Review Pitch
+                          </Button>
+                          <Link to="/analytics" className="flex-1">
+                            <Button size="sm" variant="outline" className="w-full">
+                              View Details
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                    {pendingPitches.length > 3 && (
+                      <Link to="/analytics">
+                        <Button variant="outline" className="w-full">
+                          View All {pendingPitches.length} Pitches
+                        </Button>
+                      </Link>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Browse Actions */}
               <Card className="glass border-0">
                 <CardHeader>
@@ -309,6 +442,14 @@ const InvestorDashboard = () => {
       </div>
 
       <Footer />
+
+      {/* Pitch Review Modal */}
+      <PitchReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        analysis={selectedPitch}
+        onDecisionMade={handleDecisionMade}
+      />
     </div>
   );
 };

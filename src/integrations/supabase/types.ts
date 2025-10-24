@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      investment_decisions: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          granted_amount: number | null
+          id: string
+          investor_id: string
+          pitch_analysis_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          granted_amount?: number | null
+          id?: string
+          investor_id: string
+          pitch_analysis_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          granted_amount?: number | null
+          id?: string
+          investor_id?: string
+          pitch_analysis_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_decisions_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investment_decisions_pitch_analysis_id_fkey"
+            columns: ["pitch_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "pitch_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pitch_analyses: {
         Row: {
           analysis_status: string
@@ -112,6 +160,9 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          investment_focus: string[] | null
+          max_investment_amount: number | null
+          min_investment_amount: number | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string | null
         }
@@ -120,6 +171,9 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          investment_focus?: string[] | null
+          max_investment_amount?: number | null
+          min_investment_amount?: number | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
@@ -128,6 +182,9 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          investment_focus?: string[] | null
+          max_investment_amount?: number | null
+          min_investment_amount?: number | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string | null
         }
@@ -242,12 +299,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args:
-          | { _role: Database["public"]["Enums"]["app_role"]; _user_id: string }
-          | { _role: string; _user_id: string }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "founder" | "investor"
