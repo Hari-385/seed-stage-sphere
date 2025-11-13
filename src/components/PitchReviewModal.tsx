@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, TrendingUp, Users, DollarSign, AlertTriangle } from "lucide-react";
+import { FileText, TrendingUp, Users, DollarSign, AlertTriangle, Download } from "lucide-react";
 
 interface PitchReviewModalProps {
   open: boolean;
@@ -72,6 +72,31 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
     return "text-red-500";
   };
 
+  const handleDownloadPitch = async () => {
+    if (!analysis?.file_path) return;
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from('pitch-decks')
+        .download(analysis.file_path);
+      
+      if (error) throw error;
+      
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = analysis.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Pitch file downloaded successfully!");
+    } catch (error: any) {
+      toast.error("Failed to download pitch: " + error.message);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -94,6 +119,28 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
               {analysis.category && (
                 <Badge className="mt-2">{analysis.category}</Badge>
               )}
+            </div>
+
+            {/* Uploaded Pitch File */}
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-sm">Pitch Document</p>
+                    <p className="text-xs text-muted-foreground">{analysis.file_name}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadPitch}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+              </div>
             </div>
 
             {/* Overall Score */}
