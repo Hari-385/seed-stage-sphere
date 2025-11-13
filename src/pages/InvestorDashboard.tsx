@@ -216,21 +216,21 @@ const InvestorDashboard = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Pending Pitches for Review */}
+              {/* All Pitches for Review */}
               {pendingPitches.length > 0 && (
                 <Card className="glass border-0">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="w-5 h-5" />
-                        Pitches to Review
+                        All Startup Pitches
                       </CardTitle>
-                      <Badge variant="secondary">{pendingPitches.length} new</Badge>
+                      <Badge variant="secondary">{pendingPitches.length} pitches</Badge>
                     </div>
-                    <CardDescription>AI-analyzed pitches waiting for your evaluation</CardDescription>
+                    <CardDescription>AI-analyzed startup pitches with detailed evaluation</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {pendingPitches.slice(0, 3).map((pitch) => (
+                    {pendingPitches.map((pitch) => (
                       <div key={pitch.id} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
@@ -271,13 +271,6 @@ const InvestorDashboard = () => {
                         </div>
                       </div>
                     ))}
-                    {pendingPitches.length > 3 && (
-                      <Link to="/analytics">
-                        <Button variant="outline" className="w-full">
-                          View All {pendingPitches.length} Pitches
-                        </Button>
-                      </Link>
-                    )}
                   </CardContent>
                 </Card>
               )}
