@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileText, TrendingUp, Users, DollarSign, AlertTriangle, Download } from "lucide-react";
+import { FileText, TrendingUp, Users, DollarSign, AlertTriangle, Download, Eye } from "lucide-react";
 
 interface PitchReviewModalProps {
   open: boolean;
@@ -28,6 +28,9 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
   const [grantedAmount, setGrantedAmount] = useState<string>("");
   const [feedback, setFeedback] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const handleSubmit = async () => {
     if (!analysis) return;
@@ -97,6 +100,36 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
     }
   };
 
+  const handlePreviewPitch = async () => {
+    if (!analysis?.file_path) return;
+    
+    setLoadingPreview(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('pitch-decks')
+        .download(analysis.file_path);
+      
+      if (error) throw error;
+      
+      const url = URL.createObjectURL(data);
+      setPreviewUrl(url);
+      setShowPreview(true);
+      toast.success("Loading preview...");
+    } catch (error: any) {
+      toast.error("Failed to preview pitch: " + error.message);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleClosePreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setShowPreview(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -131,15 +164,27 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
                     <p className="text-xs text-muted-foreground">{analysis.file_name}</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadPitch}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviewPitch}
+                    disabled={loadingPreview}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    {loadingPreview ? "Loading..." : "Preview"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadPitch}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -288,6 +333,24 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
           </div>
         )}
       </DialogContent>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreview} onOpenChange={handleClosePreview}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>Pitch Preview - {analysis?.file_name}</DialogTitle>
+          </DialogHeader>
+          <div className="w-full h-[calc(95vh-80px)] overflow-hidden">
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0"
+                title="Pitch Preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
