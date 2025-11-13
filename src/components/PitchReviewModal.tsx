@@ -80,7 +80,7 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
     
     try {
       const { data, error } = await supabase.storage
-        .from('pitch-decks')
+        .from('pitch-files')
         .download(analysis.file_path);
       
       if (error) throw error;
@@ -106,7 +106,7 @@ export const PitchReviewModal = ({ open, onOpenChange, analysis, onDecisionMade 
     setLoadingPreview(true);
     try {
       const { data, error } = await supabase.storage
-        .from('pitch-decks')
+        .from('pitch-files')
         .download(analysis.file_path);
       
       if (error) throw error;
